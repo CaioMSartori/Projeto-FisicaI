@@ -230,11 +230,16 @@ def game_loop():
                     vy = 0
                     vx = 0
                     jump = False
-                    
-                    # Incrementa a pontuação apenas quando o jogador aterrissar em uma plataforma nova
+
+                    # Movimento horizontal induzido pela rotação
+                    # Derivada de x em relação ao tempo na circunferência: dx = -sen(θ) * ω * r
+                    dx = -math.sin(angle) * 0.03 * radius
+                    player_x += dx  # Aplica esse movimento ao jogador
+
                     if last_landed_platform != p:
                         score += 1
-                        last_landed_platform = p  # Atualiza a plataforma onde o jogador aterrissou
+                        last_landed_platform = p
+
 
         # Remove plataformas fora da tela
         if platforms and platforms[0]['x'] - (player_x - WIDTH // 3) < -100:
