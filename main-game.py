@@ -70,7 +70,8 @@ def spawn_platform(last_x, last_y):
     x = last_x + platform_distance
     y = last_y + random.randint(-30, 30)  # variação suave
     y = max(300, min(y, HEIGHT - 200))  # garante que as plataformas não fiquem muito abaixo
-    return {'x': x, 'y': y, 'angle': 0}
+    radius = random.randint(30, 100)
+    return {'x': x, 'y': y, 'angle': 0, 'radius': radius}
 
 
 def menu():
@@ -210,15 +211,16 @@ def game_loop():
             p['angle'] += 0.03
             px = p['x'] - (player_x - WIDTH // 3)
             py = p['y']
+            radius = p['radius']
 
             # Base da plataforma giratória
-            pygame.draw.circle(screen, GRAY, (int(px), int(py)), 50, 5)
+            pygame.draw.circle(screen, GRAY, (int(px), int(py)), radius, 5)
 
             # Suportes fixos na plataforma
             for i in range(4):
                 angle = p['angle'] + math.radians(90 * i)
-                sx = px + math.cos(angle) * 40
-                sy = py + math.sin(angle) * 40
+                sx = px + math.cos(angle) * radius
+                sy = py + math.sin(angle) * radius
                 pygame.draw.rect(screen, BLUE, (sx - 20, sy - 5, 40, 10))  # Suportes horizontais
 
                 # Colisão
