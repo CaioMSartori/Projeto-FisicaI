@@ -182,12 +182,12 @@ def game_loop():
         if keys[pygame.K_SPACE] and not jump:
             vy = -12  # Ajuste a força do pulo aqui
             vx = speed
-            jump = True
 
         # Atualiza jogador
         player_y += vy
         player_x += vx
         vy += gravity
+        jump = True
 
         # Game Over se cair
         if player_y > HEIGHT:
