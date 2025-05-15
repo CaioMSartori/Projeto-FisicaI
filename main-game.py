@@ -71,8 +71,23 @@ def spawn_platform(last_x, last_y):
     y = last_y + random.randint(-30, 30)  # variação suave
     y = max(300, min(y, HEIGHT - 200))  # garante que as plataformas não fiquem muito abaixo
     radius = random.randint(30, 100)
-    rect_number = random.randint(2, 5)
-    return {'x': x, 'y': y, 'angle': 0, 'radius': radius, 'number': rect_number}
+    
+    # Determina o número de suportes com base no raio
+    if 30 <= radius <= 50:
+        rect_number = random.randint(1, 2)
+    elif 51 <= radius <= 70:
+        rect_number = random.randint(3, 4)
+    else:
+        rect_number = random.randint(4, 6)
+
+    # Define uma velocidade de rotação aleatória para cada plataforma
+    rotation_speed = random.uniform(0.02, 0.04)  # Randomiza entre 0.01 e 0.1
+
+    # Determina a direção de rotação aleatória: 1 para horário, -1 para anti-horário
+    rotation_direction = random.choice([1, -1])  # 1 é horário, -1 é anti-horário
+
+    return {'x': x, 'y': y, 'angle': 0, 'radius': radius, 'number': rect_number, 
+            'rotation_speed': rotation_speed, 'rotation_direction': rotation_direction}
 
 
 def menu():
@@ -209,7 +224,7 @@ def game_loop():
 
         # Atualiza e desenha plataformas giratórias
         for p in platforms:
-            p['angle'] += 0.03
+            p['angle'] += p['rotation_speed'] * p['rotation_direction'] # Usa a velocidade de rotação randomizada e em sentidos opostos
             px = p['x'] - (player_x - WIDTH // 3)
             py = p['y']
             radius = p['radius']
@@ -234,7 +249,7 @@ def game_loop():
                     
                     # Movimento horizontal induzido pela rotação
                     # Derivada de x em relação ao tempo na circunferência: dx = -sen(θ) * ω * r
-                    dx = -math.sin(angle) * 0.03 * radius
+                    dx = -math.sin(angle) * p['rotation_speed'] * p['rotation_direction'] * radius
                     player_x += dx  # Aplica esse movimento ao jogador
 
                     # Incrementa a pontuação apenas quando o jogador aterrissar em uma plataforma nova
