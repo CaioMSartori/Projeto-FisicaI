@@ -270,6 +270,25 @@ def game_loop():
         # Jogador
         pygame.draw.circle(screen, RED, (WIDTH // 3, int(player_y)), player_radius)
 
+        # Olhos
+        eye_offset_x = 6
+        eye_offset_y = -5
+        pygame.draw.circle(screen, WHITE, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 4)
+        pygame.draw.circle(screen, WHITE, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 4)
+
+        pygame.draw.circle(screen, BLACK, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 2)
+        pygame.draw.circle(screen, BLACK, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 2)
+
+        # Boca
+        cx, cy = WIDTH // 3, int(player_y) + 6 
+        pygame.draw.lines(screen, BLACK, False, [
+            (cx - 8, cy + 2),
+            (cx - 4, cy + 3),
+            (cx,     cy + 4),
+            (cx + 4, cy + 3),
+            (cx + 8, cy + 2)
+        ], 2)
+
         # Pontuação
         draw_text(f"Pontos: {score}", 30, BLACK, WIDTH // 2, 30)
 
