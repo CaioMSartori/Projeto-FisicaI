@@ -58,6 +58,8 @@ platform_distance = 245  # Distância maior entre plataformas para facilitar os 
 # Plataforma inicial
 initial_platform = {'x': 380, 'y': HEIGHT - 100}
 
+# Timer para o contador de 3 segundos
+platform_timer = 0  # Variável para armazenar o tempo de aterrissagem
 
 def draw_text(text, size, color, x, y):
     font = pygame.font.SysFont(None, size)
@@ -162,7 +164,7 @@ def game_over():
 
 
 def game_loop():
-    global player_x, player_y, vy, vx, jump, score, platforms, state
+    global player_x, player_y, vy, vx, jump, score, platforms, state, platform_timer
 
     # Reset
     player_x = WIDTH // 3 + 150
@@ -172,6 +174,9 @@ def game_loop():
     jump = False
     score = 0
     platforms = []
+
+    # Reinicia o temporizador (para o contador de 3 segundos)
+    platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao começar o jogo
 
     # Cria primeiras plataformas
     last_x = initial_platform['x'] + 25  # primeira roda após a plataforma inicial
@@ -256,6 +261,17 @@ def game_loop():
                     if last_landed_platform != p:
                         score += 1
                         last_landed_platform = p  # Atualiza a plataforma onde o jogador aterrissou
+                        platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao pousar
+
+        # Verifica se o tempo parado excedeu 3 segundos
+        elapsed = pygame.time.get_ticks() - platform_timer
+        if elapsed > 3000:  # 3 segundos em milissegundos
+            state = GAME_OVER
+            return
+
+        # Temporizador visual
+        remaining = max(0, 3 - elapsed // 1000)
+        draw_text(f"Tempo para pular: {remaining}", 25, RED, WIDTH // 2, 60)
 
         # Remove plataformas fora da tela
         if platforms and platforms[0]['x'] - (player_x - WIDTH // 3) < -100:
