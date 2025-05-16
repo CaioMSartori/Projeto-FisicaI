@@ -58,7 +58,7 @@ platform_distance = 245  # Distância maior entre plataformas para facilitar os 
 # Plataforma inicial
 initial_platform = {'x': 380, 'y': HEIGHT - 100}
 
-# Timer para o contador de 3 segundos
+# Timer para o contador de 5 segundos
 platform_timer = 0  # Variável para armazenar o tempo de aterrissagem
 
 def draw_text(text, size, color, x, y):
@@ -83,10 +83,10 @@ def spawn_platform(last_x, last_y):
         rect_number = random.randint(4, 6)
 
     # Define uma velocidade de rotação aleatória para cada plataforma
-    rotation_speed = random.uniform(0.02, 0.04)  # Randomiza entre 0.01 e 0.1
+    rotation_speed = random.uniform(0.02, 0.04)  # Randomiza entre 0.02 e 0.04
 
     # Determina a direção de rotação aleatória: 1 para horário, -1 para anti-horário
-    rotation_direction = random.choice([1, -1])  # 1 é horário, -1 é anti-horário
+    rotation_direction = random.choice([1, -1]) 
 
     return {'x': x, 'y': y, 'angle': 0, 'radius': radius, 'number': rect_number, 
             'rotation_speed': rotation_speed, 'rotation_direction': rotation_direction}
@@ -175,7 +175,7 @@ def game_loop():
     score = 0
     platforms = []
 
-    # Reinicia o temporizador (para o contador de 3 segundos)
+    # Reinicia o temporizador (para o contador de 5 segundos)
     platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao começar o jogo
 
     # Cria primeiras plataformas
@@ -263,14 +263,14 @@ def game_loop():
                         last_landed_platform = p  # Atualiza a plataforma onde o jogador aterrissou
                         platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao pousar
 
-        # Verifica se o tempo parado excedeu 3 segundos
+        # Verifica se o tempo parado excedeu 5 segundos
         elapsed = pygame.time.get_ticks() - platform_timer
-        if elapsed > 3000:  # 3 segundos em milissegundos
+        if elapsed > 5000:  # 5 segundos em milissegundos
             state = GAME_OVER
             return
 
         # Temporizador visual
-        remaining = max(0, 3 - elapsed // 1000)
+        remaining = max(0, 5 - elapsed // 1000)
         draw_text(f"Tempo para pular: {remaining}", 25, RED, WIDTH // 2, 60)
 
         # Remove plataformas fora da tela
@@ -286,7 +286,7 @@ def game_loop():
         # Jogador
         pygame.draw.circle(screen, RED, (WIDTH // 3, int(player_y)), player_radius)
 
-        # Olhos
+        # Olhos do jogador
         eye_offset_x = 6
         eye_offset_y = -5
         pygame.draw.circle(screen, WHITE, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 4)
@@ -295,7 +295,7 @@ def game_loop():
         pygame.draw.circle(screen, BLACK, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 2)
         pygame.draw.circle(screen, BLACK, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 2)
 
-        # Boca
+        # Boca do jogador
         cx, cy = WIDTH // 3, int(player_y) + 6 
         pygame.draw.lines(screen, BLACK, False, [
             (cx - 8, cy + 2),
