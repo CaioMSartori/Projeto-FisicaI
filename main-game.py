@@ -19,7 +19,7 @@ GRAY = (100, 100, 100)
 
 # Tela
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Rotating Platformer")
+pygame.display.set_caption("Just Jump!")
 clock = pygame.time.Clock()
 
 # Estados do jogo
@@ -96,7 +96,7 @@ def menu():
     global state
     while True:
         screen.fill(WHITE)
-        draw_text("Rotating Platformer", 60, BLACK, WIDTH // 2, HEIGHT // 4)
+        draw_text("Just Jump!", 60, BLACK, WIDTH // 2, HEIGHT // 4)
         draw_text("1. Começar", 40, BLACK, WIDTH // 2, HEIGHT // 2)
         draw_text("2. Sair", 40, BLACK, WIDTH // 2, HEIGHT // 2 + 60)
 
