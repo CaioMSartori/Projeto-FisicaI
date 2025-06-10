@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 import math
 import random
 
@@ -48,8 +49,23 @@ vx = 0
 speed = 5
 gravity = 0.5
 
-# Pontuação
+# Pontuação e funções para manipular o recorde
 score = 0
+
+def load_high_score():
+    try:
+        if os.path.exists("recorde.txt"):
+            with open("recorde.txt", "r") as f:
+                return int(f.read())
+    except:
+        pass
+    return 0
+
+def save_high_score(score):
+    with open("recorde.txt", "w") as f:
+        f.write(str(score))
+
+high_score = load_high_score()
 
 # Plataforma
 platforms = []
@@ -66,7 +82,6 @@ def draw_text(text, size, color, x, y):
     surface = font.render(text, True, color)
     rect = surface.get_rect(center=(x, y))
     screen.blit(surface, rect)
-
 
 def spawn_platform(last_x, last_y):
     x = last_x + platform_distance
@@ -121,7 +136,6 @@ def menu():
         pygame.display.flip()
         clock.tick(FPS)
 
-
 def difficulty_select():
     global state, selected_difficulty
     while True:
@@ -147,14 +161,14 @@ def difficulty_select():
         pygame.display.flip()
         clock.tick(FPS)
 
-
 def game_over():
     global state
     while True:
         screen.fill(WHITE)
         draw_text("Game Over!", 60, RED, WIDTH // 2, HEIGHT // 3)
         draw_text(f"Pontuação: {score}", 40, BLACK, WIDTH // 2, HEIGHT // 2)
-        draw_text("Pressione Enter para voltar ao menu", 30, BLACK, WIDTH // 2, HEIGHT // 2 + 50)
+        draw_text(f"Recorde: {high_score}", 35, BLACK, WIDTH // 2, HEIGHT // 2 + 50)
+        draw_text("Pressione Enter para voltar ao menu", 30, BLACK, WIDTH // 2, HEIGHT // 2 + 100)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -168,9 +182,8 @@ def game_over():
         pygame.display.flip()
         clock.tick(FPS)
 
-
 def game_loop():
-    global player_x, player_y, vy, vx, jump, score, platforms, state, platform_timer
+    global player_x, player_y, vy, vx, jump, score, platforms, state, platform_timer, high_score
 
     # Reset
     player_x = WIDTH // 3 + 150
@@ -230,6 +243,9 @@ def game_loop():
 
         # Game Over se cair
         if player_y > HEIGHT:
+            if score > high_score:
+                high_score = score
+                save_high_score(high_score)
             state = GAME_OVER
             return
 
@@ -284,6 +300,9 @@ def game_loop():
         # Verifica se o tempo parado excedeu 5 segundos
         elapsed = pygame.time.get_ticks() - platform_timer
         if elapsed > 5000:  # 5 segundos em milissegundos
+            if score > high_score:
+                high_score = score
+                save_high_score(high_score)
             state = GAME_OVER
             return
 
@@ -325,6 +344,7 @@ def game_loop():
 
         # Pontuação
         draw_text(f"Pontos: {score}", 30, BLACK, WIDTH // 2, 30)
+        draw_text(f"Recorde: {high_score}", 25, BLUE, WIDTH // 2, 90)
 
         for laser in lasers:
             lx = laser['x'] - (player_x - WIDTH // 3) 
@@ -349,6 +369,9 @@ def game_loop():
 
                     # Colisão com jogador
                     if WIDTH // 3 - player_radius < lx < WIDTH // 3 + player_radius and player_y > ly:
+                        if score > high_score:
+                            high_score = score
+                            save_high_score(high_score)
                         state = GAME_OVER
                         return
                 else:
@@ -356,7 +379,6 @@ def game_loop():
         
         pygame.display.flip()
         clock.tick(FPS)
-
 
 # Loop principal
 while True:
