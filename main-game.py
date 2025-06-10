@@ -91,6 +91,12 @@ def spawn_platform(last_x, last_y):
     return {'x': x, 'y': y, 'angle': 0, 'radius': radius, 'number': rect_number, 
             'rotation_speed': rotation_speed, 'rotation_direction': rotation_direction}
 
+def spawn_laser_between(p1, p2):
+    x = (p1['x'] + p2['x']) // 2
+    y1_top = p1['y'] - p1['radius']
+    y2_top = p2['y'] - p2['radius']
+    y = min(y1_top, y2_top) - 250  # posiciona acima das plataformas
+    return {'x': x, 'y': y, 'last_fire': pygame.time.get_ticks(), 'beam_active': False}
 
 def menu():
     global state
@@ -174,6 +180,8 @@ def game_loop():
     jump = False
     score = 0
     platforms = []
+    lasers = []
+    laser_cooldown = 3000
 
     # Reinicia o temporizador (para o contador de 5 segundos)
     platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao começar o jogo
@@ -181,10 +189,20 @@ def game_loop():
     # Cria primeiras plataformas
     last_x = initial_platform['x'] + 25  # primeira roda após a plataforma inicial
     last_y = initial_platform['y']
+    platform_passed_count = 0
     for _ in range(10):
         platforms.append(spawn_platform(last_x, last_y))
         last_x = platforms[-1]['x']
         last_y = platforms[-1]['y']
+
+        # A cada 4 plataformas passadas, cria um laser
+        platform_passed_count += 1
+        if platform_passed_count % 4 == 0:
+            # Cria o laser entre a última plataforma e a anterior
+            if len(platforms) >= 2:
+                p1 = platforms[-2]  # Plataforma anterior à última
+                p2 = platforms[-1]  # Última plataforma
+                lasers.append(spawn_laser_between(p1, p2))
 
     # Variável para controlar a plataforma na qual o jogador está
     last_landed_platform = None
@@ -308,6 +326,34 @@ def game_loop():
         # Pontuação
         draw_text(f"Pontos: {score}", 30, BLACK, WIDTH // 2, 30)
 
+        for laser in lasers:
+            lx = laser['x'] - (player_x - WIDTH // 3) 
+            ly = laser['y']
+
+            # Desenha o emissor
+            pygame.draw.rect(screen, BLACK, (lx - 10, ly, 20, 30))
+
+            # Tempo atual
+            now = pygame.time.get_ticks()
+
+            # Dispara laser se passou o cooldown
+            if now - laser['last_fire'] >= laser_cooldown:
+                laser['last_fire'] = now
+                laser['beam_active'] = True
+                laser['beam_start'] = now
+
+            # Desenha raio enquanto ativo (0.8s)
+            if laser.get('beam_active'):
+                if now - laser['beam_start'] <= 800:
+                    pygame.draw.line(screen, RED, (lx, ly + 30), (lx, HEIGHT), 4)
+
+                    # Colisão com jogador
+                    if WIDTH // 3 - player_radius < lx < WIDTH // 3 + player_radius and player_y > ly:
+                        state = GAME_OVER
+                        return
+                else:
+                    laser['beam_active'] = False
+        
         pygame.display.flip()
         clock.tick(FPS)
 
