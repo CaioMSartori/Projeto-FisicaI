@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+import json
 import math
 import random
 
@@ -31,7 +32,27 @@ GAME_OVER = 'game_over'
 
 # Dificuldades
 DIFFICULTIES = ['Fácil', 'Médio', 'Difícil']
-UNLOCKED = [True, False, False]
+
+DIFFICULTY_PARAMS = {
+    0: {  # Fácil
+        "rotation_speed_range": (0.01, 0.02),
+        "laser_active": False,
+        "timer_active": False,
+        "laser_interval": 0,
+    },
+    1: {  # Médio
+        "rotation_speed_range": (0.02, 0.03),
+        "laser_active": True,
+        "timer_active": False,
+        "laser_interval": 3000,
+    },
+    2: {  # Difícil
+        "rotation_speed_range": (0.02, 0.04),
+        "laser_active": True,
+        "timer_active": True,
+        "laser_interval": 2000,
+    }
+}
 
 # Variáveis do jogo
 state = MENU
@@ -52,20 +73,20 @@ gravity = 0.5
 # Pontuação e funções para manipular o recorde
 score = 0
 
-def load_high_score():
-    try:
-        if os.path.exists("recorde.txt"):
-            with open("recorde.txt", "r") as f:
-                return int(f.read())
-    except:
-        pass
-    return 0
+def load_high_scores():
+    if os.path.exists("recordes.json"):
+        with open("recordes.json", "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {str(i): 0 for i in range(3)}
+    return {str(i): 0 for i in range(3)}
 
-def save_high_score(score):
-    with open("recorde.txt", "w") as f:
-        f.write(str(score))
+def save_high_scores(high_scores):
+    with open("recordes.json", "w") as f:
+        json.dump(high_scores, f)
 
-high_score = load_high_score()
+high_scores = load_high_scores()
 
 # Plataforma
 platforms = []
@@ -83,7 +104,7 @@ def draw_text(text, size, color, x, y):
     rect = surface.get_rect(center=(x, y))
     screen.blit(surface, rect)
 
-def spawn_platform(last_x, last_y):
+def spawn_platform(last_x, last_y, difficulty):
     x = last_x + platform_distance
     y = last_y + random.randint(-30, 30)  # variação suave
     y = max(300, min(y, HEIGHT - 200))  # garante que as plataformas não fiquem muito abaixo
@@ -98,7 +119,8 @@ def spawn_platform(last_x, last_y):
         rect_number = random.randint(4, 6)
 
     # Define uma velocidade de rotação aleatória para cada plataforma
-    rotation_speed = random.uniform(0.02, 0.04)  # Randomiza entre 0.02 e 0.04
+    rotation_speed_range = DIFFICULTY_PARAMS[difficulty]["rotation_speed_range"]
+    rotation_speed = random.uniform(*rotation_speed_range)
 
     # Determina a direção de rotação aleatória: 1 para horário, -1 para anti-horário
     rotation_direction = random.choice([1, -1]) 
@@ -106,7 +128,10 @@ def spawn_platform(last_x, last_y):
     return {'x': x, 'y': y, 'angle': 0, 'radius': radius, 'number': rect_number, 
             'rotation_speed': rotation_speed, 'rotation_direction': rotation_direction}
 
-def spawn_laser_between(p1, p2):
+def spawn_laser_between(p1, p2, difficulty):
+    if not DIFFICULTY_PARAMS[difficulty]["laser_active"]:
+        return None  # Não cria laser se a dificuldade não permitir
+    
     x = (p1['x'] + p2['x']) // 2
     y1_top = p1['y'] - p1['radius']
     y2_top = p2['y'] - p2['radius']
@@ -142,8 +167,12 @@ def difficulty_select():
         screen.fill(WHITE)
         draw_text("Selecione a Dificuldade", 50, BLACK, WIDTH // 2, HEIGHT // 4)
 
+        # Cores por dificuldade
+        difficulty_colors = [(0, 200, 0), (255, 140, 0), (200, 0, 0)]
+
+        # Exibe as três dificuldades
         for i, diff in enumerate(DIFFICULTIES):
-            color = (0, 200, 0) if UNLOCKED[i] else (180, 180, 180)
+            color = difficulty_colors[i]
             draw_text(f"{i+1}. {diff}", 40, color, WIDTH // 2, HEIGHT // 2 + i * 50)
 
         for event in pygame.event.get():
@@ -153,10 +182,9 @@ def difficulty_select():
             if event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_1, pygame.K_2, pygame.K_3]:
                     idx = event.key - pygame.K_1
-                    if UNLOCKED[idx]:
-                        selected_difficulty = idx
-                        state = GAME
-                        return
+                    selected_difficulty = idx
+                    state = GAME
+                    return
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -167,7 +195,7 @@ def game_over():
         screen.fill(WHITE)
         draw_text("Game Over!", 60, RED, WIDTH // 2, HEIGHT // 3)
         draw_text(f"Pontuação: {score}", 40, BLACK, WIDTH // 2, HEIGHT // 2)
-        draw_text(f"Recorde: {high_score}", 35, BLACK, WIDTH // 2, HEIGHT // 2 + 50)
+        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 35, BLACK, WIDTH // 2, HEIGHT // 2 + 50)
         draw_text("Pressione Enter para voltar ao menu", 30, BLACK, WIDTH // 2, HEIGHT // 2 + 100)
 
         for event in pygame.event.get():
@@ -194,7 +222,7 @@ def game_loop():
     score = 0
     platforms = []
     lasers = []
-    laser_cooldown = 3000
+    laser_cooldown = DIFFICULTY_PARAMS[selected_difficulty]["laser_interval"]
 
     # Reinicia o temporizador (para o contador de 5 segundos)
     platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao começar o jogo
@@ -204,7 +232,7 @@ def game_loop():
     last_y = initial_platform['y']
     platform_passed_count = 0
     for _ in range(10):
-        platforms.append(spawn_platform(last_x, last_y))
+        platforms.append(spawn_platform(last_x, last_y, selected_difficulty))
         last_x = platforms[-1]['x']
         last_y = platforms[-1]['y']
 
@@ -215,7 +243,9 @@ def game_loop():
             if len(platforms) >= 2:
                 p1 = platforms[-2]  # Plataforma anterior à última
                 p2 = platforms[-1]  # Última plataforma
-                lasers.append(spawn_laser_between(p1, p2))
+                laser = spawn_laser_between(p1, p2, selected_difficulty)
+                if laser:
+                    lasers.append(laser)
 
     # Variável para controlar a plataforma na qual o jogador está
     last_landed_platform = None
@@ -243,9 +273,9 @@ def game_loop():
 
         # Game Over se cair
         if player_y > HEIGHT:
-            if score > high_score:
-                high_score = score
-                save_high_score(high_score)
+            if score > high_scores[str(selected_difficulty)]:
+                high_scores[str(selected_difficulty)] = score
+                save_high_scores(high_scores)
             state = GAME_OVER
             return
 
@@ -298,17 +328,18 @@ def game_loop():
                         platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao pousar
 
         # Verifica se o tempo parado excedeu 5 segundos
-        elapsed = pygame.time.get_ticks() - platform_timer
-        if elapsed > 5000:  # 5 segundos em milissegundos
-            if score > high_score:
-                high_score = score
-                save_high_score(high_score)
-            state = GAME_OVER
-            return
+        if DIFFICULTY_PARAMS[selected_difficulty]["timer_active"]:
+            elapsed = pygame.time.get_ticks() - platform_timer
+            if elapsed > 5000:  # 5 segundos em milissegundos
+                if score > high_scores[str(selected_difficulty)]:
+                    high_scores[str(selected_difficulty)] = score
+                    save_high_scores(high_scores)
+                state = GAME_OVER
+                return
 
-        # Temporizador visual
-        remaining = max(0, 5 - elapsed // 1000)
-        draw_text(f"Tempo para pular: {remaining}", 25, RED, WIDTH // 2, 60)
+            # Temporizador visual
+            remaining = max(0, 5 - elapsed // 1000)
+            draw_text(f"Tempo para pular: {remaining}", 25, RED, WIDTH // 2, 60)
 
         # Remove plataformas fora da tela
         if platforms and platforms[0]['x'] - (player_x - WIDTH // 3) < -100:
@@ -318,7 +349,7 @@ def game_loop():
         if platforms and platforms[-1]['x'] < player_x + WIDTH:
             last_x = platforms[-1]['x']
             last_y = platforms[-1]['y']
-            platforms.append(spawn_platform(last_x, last_y))
+            platforms.append(spawn_platform(last_x, last_y, selected_difficulty))
 
         # Jogador
         pygame.draw.circle(screen, RED, (WIDTH // 3, int(player_y)), player_radius)
@@ -344,7 +375,7 @@ def game_loop():
 
         # Pontuação
         draw_text(f"Pontos: {score}", 30, BLACK, WIDTH // 2, 30)
-        draw_text(f"Recorde: {high_score}", 25, BLUE, WIDTH // 2, 90)
+        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 25, BLUE, WIDTH // 2, 90)
 
         for laser in lasers:
             lx = laser['x'] - (player_x - WIDTH // 3) 
@@ -369,9 +400,9 @@ def game_loop():
 
                     # Colisão com jogador
                     if WIDTH // 3 - player_radius < lx < WIDTH // 3 + player_radius and player_y > ly:
-                        if score > high_score:
-                            high_score = score
-                            save_high_score(high_score)
+                        if score > high_scores[str(selected_difficulty)]:
+                            high_scores[str(selected_difficulty)] = score
+                            save_high_scores(high_scores)
                         state = GAME_OVER
                         return
                 else:
