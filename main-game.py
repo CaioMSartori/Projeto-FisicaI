@@ -264,6 +264,7 @@ def game_loop():
         if keys[pygame.K_SPACE] and not jump:
             vy = -12  # Ajuste a força do pulo aqui
             vx = speed
+            platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao pular
 
         # Atualiza jogador
         player_y += vy
@@ -325,7 +326,6 @@ def game_loop():
                     if last_landed_platform != p:
                         score += 1
                         last_landed_platform = p  # Atualiza a plataforma onde o jogador aterrissou
-                        platform_timer = pygame.time.get_ticks()  # Reinicia o tempo ao pousar
 
         # Verifica se o tempo parado excedeu 5 segundos
         if DIFFICULTY_PARAMS[selected_difficulty]["timer_active"]:
