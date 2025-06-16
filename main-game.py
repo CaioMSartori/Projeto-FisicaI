@@ -11,18 +11,47 @@ pygame.init()
 # Constantes
 WIDTH, HEIGHT = 800, 600
 FPS = 60
+FPS_BG = 30
 
 # Cores
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
-BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
 GRAY = (100, 100, 100)
 
 # Tela
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Just Jump!")
 clock = pygame.time.Clock()
+
+def load_background_frames(folder_path):
+    frames = []
+    for filename in sorted(os.listdir(folder_path)):
+        if filename.endswith('.png') or filename.endswith('.jpg'):
+            path = os.path.join(folder_path, filename)
+            image = pygame.image.load(path).convert()
+            image = pygame.transform.scale(image, (WIDTH, HEIGHT))  # Ajusta ao tamanho da tela
+            frames.append(image)
+    return frames
+
+base_path = os.path.dirname(__file__)
+background_folder = os.path.join(base_path, "background")
+gameover_sprite = os.path.join(base_path, "gameover.png")
+title_sprite = os.path.join(base_path, "title.png")
+face_sprite = os.path.join(base_path, "face.png")
+
+gameover = pygame.transform.rotozoom(pygame.image.load(gameover_sprite).convert_alpha(), 0, 1.5)
+gameover_rect = gameover.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+
+title = pygame.image.load(title_sprite).convert_alpha()
+title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+
+face = pygame.transform.scale(pygame.image.load(face_sprite).convert_alpha(), (40, 40))
+
+background_frames = load_background_frames(background_folder)
+frame_index = 0
+frame_count = 0
 
 # Estados do jogo
 MENU = 'menu'
@@ -73,9 +102,10 @@ gravity = 0.5
 # Pontuação e funções para manipular o recorde
 score = 0
 
+high_score_path = os.path.join(base_path, "recordes.json")
 def load_high_scores():
-    if os.path.exists("recordes.json"):
-        with open("recordes.json", "r") as f:
+    if os.path.exists(high_score_path):
+        with open(high_score_path, "r") as f:
             try:
                 return json.load(f)
             except json.JSONDecodeError:
@@ -83,7 +113,7 @@ def load_high_scores():
     return {str(i): 0 for i in range(3)}
 
 def save_high_scores(high_scores):
-    with open("recordes.json", "w") as f:
+    with open(high_score_path, "w") as f:
         json.dump(high_scores, f)
 
 high_scores = load_high_scores()
@@ -141,10 +171,11 @@ def spawn_laser_between(p1, p2, difficulty):
 def menu():
     global state
     while True:
-        screen.fill(WHITE)
-        draw_text("Just Jump!", 60, BLACK, WIDTH // 2, HEIGHT // 4)
-        draw_text("1. Começar", 40, BLACK, WIDTH // 2, HEIGHT // 2)
-        draw_text("2. Sair", 40, BLACK, WIDTH // 2, HEIGHT // 2 + 60)
+        screen.fill(BLACK)
+        screen.blit(title, title_rect)
+
+        draw_text("1. Começar", 40, WHITE, WIDTH // 2, HEIGHT // 2)
+        draw_text("2. Sair", 40, WHITE, WIDTH // 2, HEIGHT // 2 + 60)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -164,8 +195,8 @@ def menu():
 def difficulty_select():
     global state, selected_difficulty
     while True:
-        screen.fill(WHITE)
-        draw_text("Selecione a Dificuldade", 50, BLACK, WIDTH // 2, HEIGHT // 4)
+        screen.fill(BLACK)
+        draw_text("Selecione a Dificuldade", 50, WHITE, WIDTH // 2, HEIGHT // 4)
 
         # Cores por dificuldade
         difficulty_colors = [(0, 200, 0), (255, 140, 0), (200, 0, 0)]
@@ -192,11 +223,12 @@ def difficulty_select():
 def game_over():
     global state
     while True:
-        screen.fill(WHITE)
-        draw_text("Game Over!", 60, RED, WIDTH // 2, HEIGHT // 3)
-        draw_text(f"Pontuação: {score}", 40, BLACK, WIDTH // 2, HEIGHT // 2)
-        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 35, BLACK, WIDTH // 2, HEIGHT // 2 + 50)
-        draw_text("Pressione Enter para voltar ao menu", 30, BLACK, WIDTH // 2, HEIGHT // 2 + 100)
+        screen.fill(BLACK)
+        screen.blit(gameover, gameover_rect)
+
+        draw_text(f"Pontuação: {score}", 40, WHITE, WIDTH // 2, HEIGHT // 2)
+        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 35, WHITE, WIDTH // 2, HEIGHT // 2 + 50)
+        draw_text("Pressione Enter para voltar ao menu", 30, WHITE, WIDTH // 2, HEIGHT // 2 + 100)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -211,11 +243,12 @@ def game_over():
         clock.tick(FPS)
 
 def game_loop():
-    global player_x, player_y, vy, vx, jump, score, platforms, state, platform_timer, high_score
+    global player_x, player_y, vy, vx, jump, score, platforms, state, platform_timer, high_score, frame_index, frame_count
 
     # Reset
     player_x = WIDTH // 3 + 150
     player_y = initial_platform['y'] - player_radius
+    face_rect = face.get_rect(center=(player_x, player_y))
     vy = 0
     vx = 0
     jump = False
@@ -251,8 +284,12 @@ def game_loop():
     last_landed_platform = None
 
     while True:
-        screen.fill(WHITE)
+        frame_count += 1
 
+        if frame_count % (FPS // FPS_BG) == 0:
+            frame_index = (frame_index + 1) % len(background_frames)
+        screen.blit(background_frames[frame_index], (0, 0))
+        
         # Eventos
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -307,7 +344,7 @@ def game_loop():
                 angle = p['angle'] + math.radians(360/p['number'] * i)
                 sx = px + math.cos(angle) * radius
                 sy = py + math.sin(angle) * radius
-                pygame.draw.rect(screen, BLUE, (sx - 20, sy - 5, 40, 10))  # Suportes horizontais
+                pygame.draw.rect(screen, CYAN, (sx - 20, sy - 5, 40, 10))  # Suportes horizontais
 
                 # Colisão
                 dist = math.hypot(WIDTH // 3 - sx, player_y - sy)
@@ -352,37 +389,40 @@ def game_loop():
             platforms.append(spawn_platform(last_x, last_y, selected_difficulty))
 
         # Jogador
-        pygame.draw.circle(screen, RED, (WIDTH // 3, int(player_y)), player_radius)
+        pygame.draw.circle(screen, (233, 30, 99), (WIDTH // 3, int(player_y)), player_radius)
+        pygame.draw.circle(screen, (186, 85, 211), (WIDTH // 3, int(player_y)), player_radius, 1)
+
+        screen.blit(face, (WIDTH // 3 - 20, player_y - 20))
 
         # Olhos do jogador
-        eye_offset_x = 6
-        eye_offset_y = -5
-        pygame.draw.circle(screen, WHITE, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 4)
-        pygame.draw.circle(screen, WHITE, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 4)
+        # eye_offset_x = 6
+        # eye_offset_y = -5
+        # pygame.draw.circle(screen, WHITE, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 4)
+        # pygame.draw.circle(screen, WHITE, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 4)
 
-        pygame.draw.circle(screen, BLACK, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 2)
-        pygame.draw.circle(screen, BLACK, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 2)
+        # pygame.draw.circle(screen, BLACK, (WIDTH // 3 - eye_offset_x, int(player_y) + eye_offset_y), 2)
+        # pygame.draw.circle(screen, BLACK, (WIDTH // 3 + eye_offset_x, int(player_y) + eye_offset_y), 2)
 
         # Boca do jogador
-        cx, cy = WIDTH // 3, int(player_y) + 6 
-        pygame.draw.lines(screen, BLACK, False, [
-            (cx - 8, cy + 2),
-            (cx - 4, cy + 3),
-            (cx,     cy + 4),
-            (cx + 4, cy + 3),
-            (cx + 8, cy + 2)
-        ], 2)
+        # cx, cy = WIDTH // 3, int(player_y) + 6 
+        # pygame.draw.lines(screen, BLACK, False, [
+            # (cx - 8, cy + 2),
+            # (cx - 4, cy + 3),
+            # (cx,     cy + 4),
+            # (cx + 4, cy + 3),
+            # (cx + 8, cy + 2)
+        # ], 2)
 
         # Pontuação
-        draw_text(f"Pontos: {score}", 30, BLACK, WIDTH // 2, 30)
-        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 25, BLUE, WIDTH // 2, 90)
+        draw_text(f"Pontos: {score}", 30, WHITE, WIDTH // 2, 30)
+        draw_text(f"Recorde: {high_scores[str(selected_difficulty)]}", 25, CYAN, WIDTH // 2, 90)
 
         for laser in lasers:
             lx = laser['x'] - (player_x - WIDTH // 3) 
             ly = laser['y']
 
             # Desenha o emissor
-            pygame.draw.rect(screen, BLACK, (lx - 10, ly, 20, 30))
+            pygame.draw.rect(screen, GRAY, (lx - 10, ly, 20, 30))
 
             # Tempo atual
             now = pygame.time.get_ticks()
@@ -396,7 +436,7 @@ def game_loop():
             # Desenha raio enquanto ativo (0.8s)
             if laser.get('beam_active'):
                 if now - laser['beam_start'] <= 800:
-                    pygame.draw.line(screen, RED, (lx, ly + 30), (lx, HEIGHT), 4)
+                    pygame.draw.line(screen, (57, 255, 20), (lx, ly + 30), (lx, HEIGHT), 4)
 
                     # Colisão com jogador
                     if WIDTH // 3 - player_radius < lx < WIDTH // 3 + player_radius and player_y > ly:
